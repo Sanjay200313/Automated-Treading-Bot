@@ -1,0 +1,130 @@
+import time
+import pandas as pd
+import MetaTrader5 as mt
+from datetime import datetime
+mt.initialize()
+login = 51863279
+password = 	'5t@VV7&uftnkB1'
+server = 'ICMarketsSC-Demo'
+mt.login(login, password, server)
+
+
+
+
+#pine Script
+    #longCondition = close > high[1]
+    #shortCondition = close < low[1]
+    #closelongcondition = close < close[1]
+    #closeshortcondition = close > close[1]
+ticker = 'BTCUSD'
+qty = 0.01
+buy_order_type = mt.ORDER_TYPE_BUY
+sell_order_type = mt.ORDER_TYPE_SELL
+buy_price = mt.symbol_info_tick("BTCUSD").ask
+sell_price = mt.symbol_info_tick("BTCUSD").bid
+sl_pct = 0.05
+tp_pct = 0.1
+buy_sl = buy_price * (1-sl_pct)
+buy_tp = buy_price * (1+tp_pct)
+sell_sl = sell_price * (1+sl_pct)
+sell_tp = sell_price * (1-tp_pct)
+def create_order(ticker, qty, order_type, price, sl, tp):
+    request = {
+    "action": mt.TRADE_ACTION_DEAL,
+    "symbol": ticker,
+    "volume": qty,
+    "type": order_type,
+    "price": price,
+    "sl":sl,
+    "tp":tp,
+    "comment":"Python Script Open",
+    "type_time": mt.ORDER_TIME_GTC,
+    "type_filling": mt.ORDER_FILLING_IOC,
+ }
+
+    order = mt.order_send(request)
+    return order
+def close_order(ticker, qty, order_type, price):
+    request = {
+        "action": mt.TRADE_ACTION_DEAL,
+        "symbol": ticker,
+        "volume": qty,
+        "type": order_type,
+        "position": mt.positions_get()[0]._asdict()['ticket'],
+        "price": price,
+        "comment": "Close Position",
+        "type_time": mt.ORDER_TIME_GTC,
+        "type_filling": mt.ORDER_FILLING_IOC,
+    }
+
+    order = mt.order_send(request)
+
+
+
+
+
+for i in range(100):
+    ohlc = pd.DataFrame(mt.copy_rates_range('BTCUSD',mt.TIMEFRAME_M1, datetime(2024,7,17),datetime.now()))
+    ohlc['time'] = pd.to_datetime(ohlc['time'],unit='s')
+    print(ohlc)
+    
+    current_close = list(ohlc[-1:]['close'])[0]
+    last_close = list(ohlc[-2:]['close'])[0]
+    last_high = list(ohlc[-2:]['high'])[0]
+    last_low = list(ohlc[-2:]['low'])[0]
+    long_condition = current_close > last_high
+    short_condition = current_close < last_low
+    closelong_condition = current_close < last_close
+    closeshort_condition = current_close > last_close
+
+    already_buy = False
+    already_sell = False
+    
+    try:
+        already_sell = mt.positions_get()[0]._asdict()['type'] == 1
+        already_buy = mt.positions_get()[0]._asdict()['type'] == 0
+    except:
+        pass
+    no_positions = len(mt.positions_get()) == 0
+    
+    if long_condition:
+        if no_positions:
+            create_order(ticker, qty, buy_order_type, buy_price, buy_sl, buy_tp)
+            print('Buy Order Placed')
+        if already_sell:
+            close_order(ticker,qty,buy_order_type,buy_price)
+            print('Sell Position Closed')
+            time.sleep(1)
+            create_order(ticker, qty, buy_order_type, buy_price, buy_sl, buy_tpg9)
+            print('Buy Order Placed')
+            
+    if short_condition:
+        if no_positions:
+            create_order(ticker, qty, sell_order_type, sell_price, sell_sl, sell_tp)
+            print('Sell Order Placed')
+        if already_buy:
+            close_order(ticker,qty,sell_order_type,sell_price)
+            print('Buy Position Closed')
+            time.sleep(1)
+            create_order(ticker, qty, sell_order_type, sell_price, sell_sl, sell_tp)
+            print('Sell Order Placed')
+    
+    
+    try:
+        already_sell = mt.positions_get()[0]._asdict()['type'] == 1
+        already_buy = mt.positions_get()[0]._asdict()['type'] == 0
+    except:
+        pass
+    
+    
+    if closelong_condition and already_buy:
+        close_order(ticker,qty,sell_order_type,sell_price)
+        print('Only Buy Position Closed')
+    if closeshort_condition and already_sell:
+        close_order(ticker,qty,buy_order_type,buy_price)
+        print('Only sell Position Closed')
+        
+    already_buy = False
+    already_sell = False
+    time.sleep(60)
+               
