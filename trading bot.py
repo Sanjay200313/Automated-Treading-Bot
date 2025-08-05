@@ -3,8 +3,8 @@ import pandas as pd
 import MetaTrader5 as mt
 from datetime import datetime
 mt.initialize()
-login = 51863279
-password = 	'5t@VV7&uftnkB1'
+login = *********
+password ='**************'
 server = 'ICMarketsSC-Demo'
 mt.login(login, password, server)
 
@@ -128,3 +128,4 @@ for i in range(100):
     already_sell = False
     time.sleep(60)
                
+
